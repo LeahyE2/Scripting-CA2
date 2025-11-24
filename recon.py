@@ -10,6 +10,7 @@ def parse_args():
         "--targets",
         required=True,
         help="Path to file (one host per line; allow host or host:port)",
+        type=str
     )
 
     parser.add_argument(
@@ -52,6 +53,16 @@ def parse_args():
 
     return parser.parse_args()
 
+def targets(file_path):
+    if not os.path.isfile(file_path)
+    print(f"Error the file '{file_path}' was not found")
+
+    return
+
+    with open(file_path, "r") as f:
+        for line
+
+
 
 def main():
     args = parse_args()
@@ -70,7 +81,10 @@ if __name__ == "__main__":
     p = argparse.ArgumentParser()
     p.add_argument("--targets", required = True)
     p.add_argument("--ports", default="1-1024")
-    p.add_argument("--workers", type=int,default = 50)
+    p.add_argument("--workers", type=int,default =20)
     p.add_argument("--http", required=True)
-    p.add_argument("--tls",  )
+    p.add_argument("--tls", required=True )
+    p.add_argument("--output", required= True)
+    p.add_argument("--timeout", default=5.0)
+    args = p.parse_args()
 
