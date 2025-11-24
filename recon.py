@@ -60,7 +60,11 @@ def targets(file_path):
     return
 
     with open(file_path, "r") as f:
-        for line
+        for line_num, line in enumerate (f,1):
+            raw_target = line.strip() #This removes whitespace from start and end
+
+            if not raw_target: # Skips empty lines
+                continue
 
 
 
