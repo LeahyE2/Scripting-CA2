@@ -1,4 +1,4 @@
-import argparse, socket, json, time, os
+import argparse, socket, json, time, os, requests
 
 def parse_args():
     parser = argparse.ArgumentParser(
@@ -7,14 +7,14 @@ def parse_args():
 
     parser.add_argument(
         "--targets",
-        required=True,
+        default="Targets.txt",
         help="Path to file (one host per line; allow host or host:port)",
         type=str
     )
 
     parser.add_argument(
         "--ports",
-        required=True,
+        default="80,443",
         type=str,
         help="Comma list or ranges (e.g., 80,443,8000-8100)",
     )
