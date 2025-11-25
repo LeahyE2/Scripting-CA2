@@ -1,5 +1,4 @@
-#!/usr/bin/env python3
-import argparse, socket, json, time
+import argparse, socket, json, time, os
 
 def parse_args():
     parser = argparse.ArgumentParser(
@@ -16,8 +15,8 @@ def parse_args():
     parser.add_argument(
         "--ports",
         required=True,
+        type=str,
         help="Comma list or ranges (e.g., 80,443,8000-8100)",
-
     )
 
     parser.add_argument(
@@ -54,17 +53,17 @@ def parse_args():
     return parser.parse_args()
 
 def targets(file_path):
-    if not os.path.isfile(file_path)
-    print(f"Error the file '{file_path}' was not found")
-
-    return
-
+    if not os.path.isfile(file_path):
+        print(f"Error the file '{file_path}' was not found")
+        return
     with open(file_path, "r") as f:
         for line_num, line in enumerate (f,1):
             raw_target = line.strip() #This removes whitespace from start and end
 
             if not raw_target: # Skips empty lines
                 continue
+            
+            yield raw_target 
 
 
 
@@ -82,13 +81,4 @@ def main():
 
 if __name__ == "__main__":
     main()
-    p = argparse.ArgumentParser()
-    p.add_argument("--targets", required = True)
-    p.add_argument("--ports", default="1-1024")
-    p.add_argument("--workers", type=int,default =20)
-    p.add_argument("--http", required=True)
-    p.add_argument("--tls", required=True )
-    p.add_argument("--output", required= True)
-    p.add_argument("--timeout", default=5.0)
-    args = p.parse_args()
 
