@@ -143,7 +143,14 @@ def run_scan(args):
 
     logging.info(f"Loaded {len(target_list)} targets and {len(port_list)} ports to scan. ") 
 
-    
+    print(f"--- Parsing check ---")
+    print(f"Targets parsed: {target_list}")
+    print(f"Ports parsed: {port_list}")
+    print(f"Workers(int): {args.workers}")
+    print(f"timeout(float): {args.timeout}")
+    print(f"HTTP/TLS flags: {args.http} / {args.tls} ")
+    print(f"-------------------------")
+
 
 def main():
     args = parse_args()
