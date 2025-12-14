@@ -150,7 +150,7 @@ def run_scan(args):
 
     all_scan_results =  []
 
-    with concurrent.features.ThreadPoolExecutor(max_workers=args.workers) as executor:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=args.workers) as executor:
     
         tasks = [
             executor.submit(scan_port, target.split(':')[0], port, args.timeout, args.retry)
