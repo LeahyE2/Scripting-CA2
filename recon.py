@@ -99,7 +99,6 @@ def run_scan(args):
         logging.debug("Verbose logging enabled")
     
 
-
         
 def main():
     args = parse_args()
