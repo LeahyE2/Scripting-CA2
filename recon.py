@@ -250,10 +250,70 @@ def scan_port(host, port, timeout, retry_count):
     return result
 
 def write_json_output(data, prefix):
-    pass
+    """
+    Writes the list of scan results to a JSON File.
+    """
+    output_filename = f"{prefix}.results.json"
+
+    output_data = {
+        "meta": {
+            "run_started": time.strftime('%Y-%m-%d %X'),
+            "resumed": False 
+        },
+        "results": data 
+
+    }
+
+    try:
+        with open(output_filename, 'w') as f:
+            json.dump(output_data, f, indent=4)
+        logging.info(f"JSON results written to {output_filename}")
+    except Exception as e:
+        logging.error(f"Failed to write JSON output: {e}", exc_info=False)
+
 
 def write_csv_output(data, prefix):
-    pass
+    """
+    Writes the list of scan results to a CSV File
+    """
+    output_filename = f"{prefix}.results.csv"
+
+    if not data:
+        logging.info("No scan results to write to CSV")
+        return  
+    
+    fieldnames = list(data[0].keys())
+
+    try:
+        with open(output_filename, 'w', newline='') as csvfile:
+            writer = csv.DictWriter(csvfile, fieldnames = fieldnames)
+
+            writer.writeheader()
+
+            for row in data:
+                safe_row = {k: json.dumps(v) if isinstance(v, (dict,list)) else v for k, v in row.items()}
+                writer.writerow(safe_row)
+            
+        logging.info(f"CSV results writeter to {output_filename}")
+
+    except Exception as e:
+        logging.error(f"Failed to write CSV output to {ouput_filename}: {e}")
+
+
+def run_menu():
+    print("\n--- Recon Tool Menu ---")
+
+    targets_file = input("Enter path to targets file such as Targets.txt: ").strip()
+
+    if not targets_file:
+        logging.error("Target file path cannot be empty. exiting")
+        sys.exit(1)
+    
+    ports_input = input("Enter ports or ranges such as 80,443: ").strip()
+    
+
+
+
 
 
 def main():
@@ -261,8 +321,7 @@ def main():
 
     if args.command is None:
 
-        print("No command provided, please try 'python recon -h' for help")
-        sys.exit (1)
+        run_menu()
 
     args.func(args)
     
