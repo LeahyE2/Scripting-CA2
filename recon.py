@@ -310,7 +310,38 @@ def run_menu():
         sys.exit(1)
     
     ports_input = input("Enter ports or ranges such as 80,443: ").strip()
+    if not ports_input:
+        ports_input = "80,443"
+
+
+    workers_input = input("Enter number of concurrent workers: ").strip()
+    workers = int(workers_input) if workers_input.isdigit() else 20
+
+    http_probe = input("Probe HTTP services? (y/n): ").strip().lower() == 'y'
+    tls_probe = input("Probe TLS services? (y/n): ").strip().lower() == 'y'
+
+    output_prefix = input("Enter output file prefix: ").strip()
+    if not output_prefix:
+        output_prefix = "recon_results" 
     
+    print("\nStarting scan with collected parameters...")
+
+    class MenuArgs:
+        command = 'scan'
+        targets = targets_file
+        ports = ports_input
+        workers = workers
+        output = output_prefix 
+
+        http = False
+        tls = False 
+        timeout = 5.0
+        retry = 1
+        verbose = False
+
+        func = run_scan
+    
+    run_scan(MenuArgs())
 
 
 

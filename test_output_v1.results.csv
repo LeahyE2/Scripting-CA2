@@ -1,0 +1,5 @@
+host,port,status,duration,service_hint,banner,http,tls
+scanme.nmap.org,443,closed,0.141,,,,
+scanme.nmap.org,80,open,0.144,http,,,
+192.0.2.10,80,filtered/timeout,5.005,,,,
+192.0.2.10,443,filtered/timeout,5.004,,,,
