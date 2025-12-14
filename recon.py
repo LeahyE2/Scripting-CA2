@@ -1,15 +1,22 @@
-import argparse, socket, json, time, os, requests
+import argparse, logging, sys,time 
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    handlers=[logging.StreamHandler(sys.stderr)]
+)
+
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        description="Example argparse parser for network scanning flags"
+        description="Recon tool for nwtwork reconnaissance."
+
     )
 
     parser.add_argument(
         "--targets",
-        default="Targets.txt",
+        required=True,
         help="Path to file (one host per line; allow host or host:port)",
-        type=str
     )
 
     parser.add_argument(
