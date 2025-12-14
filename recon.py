@@ -9,7 +9,7 @@ logging.basicConfig(
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        description="Recon tool for nwtwork reconnaissance."
+        description="Recon tool for network reconnaissance."
 
     )
 
@@ -47,6 +47,7 @@ def parse_args():
 
     parser.add_argument(
         "--output",
+        deault="recon_results",
         help="Path prefix for results; tool writes PREFIX.results.json and PREFIX.results.csv",
     )
 
@@ -57,34 +58,53 @@ def parse_args():
         help="Per-connection timeout in seconds (float OK)",
     )
 
+    parser.add_argument(
+        "--verbose", "-v",
+        action="store_true",
+        help="Enable verbose debug logging"
+    )
+
     return parser.parse_args()
 
+def parse_ports(port_arg):
+
+    ports=set()
+    parts = port_arg.split("-")
+    for part in parts:
+        if "-" in part:
+            start, end = map(int, part.split("-",))
+            ports.update(range(start),end + 1)
+        else:
+            ports.add(int(part))
+    return sorted(list(ports))
+
+"""
+Reads the target file ad returns a list of targets.
+"""
 def targets(file_path):
-    if not os.path.isfile(file_path):
-        print(f"Error the file '{file_path}' was not found")
-        return
-    with open(file_path, "r") as f:
-        for line_num, line in enumerate (f,1):
-            raw_target = line.strip() #This removes whitespace from start and end
-
-            if not raw_target: # Skips empty lines
-                continue
-            
-            yield raw_target 
-
-
-
+    try:
+        with open(file_path, 'r') as f:
+            targets = [line.strip() for line in f if line.strip()]
+        return targets
+    except FileNotFoundError:
+        logging.error(f"Target file not found: {file_path}")
+        sys.exit(1)
+        
 def main():
     args = parse_args()
-    print("Arguments Received:")
-    print(f"  targets : {args.targets}")
-    print(f"  ports   : {args.ports}")
-    print(f"  workers : {args.workers}")
-    print(f"  http    : {args.http}")
-    print(f"  tls     : {args.tls}")
-    print(f"  output  : {args.output}")
-    print(f"  timeout : {args.timeout}")
 
+    if args.verbose:
+        logging.getLogger().setLevel(logging.DEBUG)
+        logging.debug("Verbose logging enabled")
+
+    print(f"[*] startiing Recon tool")
+
+    target_list = read_targets(args.targets)
+    port_list = parse_ports(args.ports)
+
+    logging.info(f"Loaded {len(target_list)} targets and {len(port_list)} ports to scan.")
+
+    print("[*] Scan complete.")
 
 if __name__ == "__main__":
     main()
