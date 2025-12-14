@@ -146,23 +146,25 @@ def run_scan(args):
     target_list = read_targets(args.targets)
     port_list = parse_ports(args.ports)
 
-    logging.info(f"Loaded {len(target_list)} targets and {len(port_list)} ports to scan. ") 
+    logging.info(f"Loaded {len(target_list)} targets and {len(port_list)} ports to scan.") 
 
     all_scan_results =  []
+
+    with concurrent.features.ThreadPoolExecutor(max_workers=args.workers) as executor:
     
-    with concurrent.features.ThreadExecutor(max_workers=args.workder) as executor:
-    
-        tasks = []
-        for target in target_list:
-            host = target.split(':')[0]
-            for port in port_list:
-                tasks.append(executor.submit(scan_port, host, port, args.timeout, args.retry))
+        tasks = [
+            executor.submit(scan_port, target.split(':')[0], port, args.timeout, args.retry)
+            for target in target_list
+            for port in port_list
+        ]
+
+        
         logging.info(f"Total scan tasks created {len(tasks)}")
 
         completed_count = 0
         total_tasks = len(tasks)
 
-        for future in concurrent.futures,as_completed(tasks):
+        for future in concurrent.futures.as_completed(tasks):
             completed_count += 1
 
             try:
@@ -173,7 +175,7 @@ def run_scan(args):
                 logging.error(f"Task generated an unexpected exception: {exc}", exc_info=args.verbose)
 
             if completed_count % 50 == 0 or completed_count == total_tasks:
-                print(f"Progress: {completed_count}/{total_tasks} tasks completed", end="", file=sys.stderr)
+                print(f"\r[*] Progress: {completed_count}/{total_tasks} tasks completed", end="", file=sys.stderr)
             
     print("", file=sys.stderr)
     logging.info(f"Scan finished. Found {len([r for r in all_scan_results if r['status'] == 'open'])} open services.") 
@@ -216,7 +218,7 @@ def scan_port(host, port, timeout, retry_count):
                 if port in (80, 8080):
                     result["service_hint"] = "http"
                 elif port in (443, 8443):
-                    result["service_hint"] = "https/tls
+                    result["service_hint"] = "https/tls"
                 else:
                     result["service_hint"] = "tcp_open" 
                 
@@ -235,14 +237,6 @@ def scan_port(host, port, timeout, retry_count):
                     logging.debug(f"Target {host}:{port} timed out/filtered.Retrying in {wait_time}s... ")
                 else:
                     result["status"] = "filtered/timeout"
-
-        except socket.timeout:
-            if attempt < retry_count - 1:
-                wait_time = 2 ** attempt
-                time.sleep(wait_time)
-                logging.debug(f"Target {host}:{port} timed out.Retrying in {wait_time}s... ")
-            else:           
-                result["status"] = "filtered/timeout"
 
         except Exception as e:
             result["status"] = "error"
