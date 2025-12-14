@@ -1,5 +1,5 @@
 import argparse, logging, sys,time, socket,json, concurrent.futures, csv 
-
+from types import SimpleNamespace
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(message)s",
@@ -297,7 +297,7 @@ def write_csv_output(data, prefix):
         logging.info(f"CSV results writeter to {output_filename}")
 
     except Exception as e:
-        logging.error(f"Failed to write CSV output to {ouput_filename}: {e}")
+        logging.error(f"Failed to write CSV output to {output_filename}: {e}")
 
 
 def run_menu():
@@ -315,7 +315,12 @@ def run_menu():
 
 
     workers_input = input("Enter number of concurrent workers: ").strip()
-    workers = int(workers_input) if workers_input.isdigit() else 20
+    
+    try:
+        workers = int(workers_input) if workers_input else 20
+    except ValueError:
+        workers = 20
+        logging.warning("Invalid input for wokrers. Using default : 20.")
 
     http_probe = input("Probe HTTP services? (y/n): ").strip().lower() == 'y'
     tls_probe = input("Probe TLS services? (y/n): ").strip().lower() == 'y'
@@ -326,35 +331,32 @@ def run_menu():
     
     print("\nStarting scan with collected parameters...")
 
-    class MenuArgs:
-        command = 'scan'
-        targets = targets_file
-        ports = ports_input
-        workers = workers
-        output = output_prefix 
+    menu_parms = {
+        'targets' : targets_file,
+        'ports' : ports_input,
+        'workers' : workers,
+        'output' : output_prefix,
+        'http' : http_probe,
+        'tls' : tls_probe,
+        'timeout' : 5.0,
+        'retry' : 1,
+        'verbose' :False,
 
-        http = False
-        tls = False 
-        timeout = 5.0
-        retry = 1
-        verbose = False
-
-        func = run_scan
+    }
     
-    run_scan(MenuArgs())
+    menu_args = SimpleNamespace(**menu_parms)
+    menu_args.func = run_scan
 
-
-
+    run_scan(menu_args)
 
 
 def main():
     args = parse_args()
 
     if args.command is None:
-
         run_menu()
-
-    args.func(args)
+    else:
+        args.func(args)
     
 
 if __name__ == "__main__":
