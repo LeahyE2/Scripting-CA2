@@ -1,4 +1,4 @@
-import argparse, logging, sys,time, socket,json, concurrent.futures 
+import argparse, logging, sys,time, socket,json, concurrent.futures, csv 
 
 logging.basicConfig(
     level=logging.INFO,
@@ -28,6 +28,8 @@ def parse_args():
         help="Run the comprehensive recon scan"
     )
 
+    scan_parser.set_defaults(func=run_scan)
+
     scan_parser.add_argument(
         "--targets",
         required=True,
@@ -48,8 +50,6 @@ def parse_args():
         help="Concurrent TCP workers (default 20)",
 
     )
-
-    scan_parser.set_defaults(func=run_scan)
 
     scan_parser.add_argument(
         "--http",
@@ -102,9 +102,14 @@ def parse_ports(port_arg):
     for part in parts:
         part = part.strip()
 
+        if not part:
+            continue
+
         if "-" in part:
             try:
                 start, end = map(int, part.split("-"))
+                if start > end:
+                    start, end = end, start
                 ports.update(range(start, end + 1))
             except ValueError:
                 logging.error(f"Invalid port range format: {part}") 
@@ -143,13 +148,118 @@ def run_scan(args):
 
     logging.info(f"Loaded {len(target_list)} targets and {len(port_list)} ports to scan. ") 
 
-    print(f"--- Parsing check ---")
-    print(f"Targets parsed: {target_list}")
-    print(f"Ports parsed: {port_list}")
-    print(f"Workers(int): {args.workers}")
-    print(f"timeout(float): {args.timeout}")
-    print(f"HTTP/TLS flags: {args.http} / {args.tls} ")
-    print(f"-------------------------")
+    all_scan_results =  []
+    
+    with concurrent.features.ThreadExecutor(max_workers=args.workder) as executor:
+    
+        tasks = []
+        for target in target_list:
+            host = target.split(':')[0]
+            for port in port_list:
+                tasks.append(executor.submit(scan_port, host, port, args.timeout, args.retry))
+        logging.info(f"Total scan tasks created {len(tasks)}")
+
+        completed_count = 0
+        total_tasks = len(tasks)
+
+        for future in concurrent.futures,as_completed(tasks):
+            completed_count += 1
+
+            try:
+                result = future.result()
+                all_scan_results.append(result)
+
+            except Exception as exc:
+                logging.error(f"Task generated an unexpected exception: {exc}", exc_info=args.verbose)
+
+            if completed_count % 50 == 0 or completed_count == total_tasks:
+                print(f"Progress: {completed_count}/{total_tasks} tasks completed", end="", file=sys.stderr)
+            
+    print("", file=sys.stderr)
+    logging.info(f"Scan finished. Found {len([r for r in all_scan_results if r['status'] == 'open'])} open services.") 
+        
+    write_json_output(all_scan_results, args.output)
+    write_csv_output(all_scan_results, args.output)
+
+    print("[*] Scan complete.")
+
+def scan_port(host, port, timeout, retry_count):
+    """
+    Attempts a TCP connection scan on the provided host along with tries 
+    """
+    result = {
+        "host": host,
+        "port": port,
+        "status": "filtered/timeout",
+        "duration": None,
+        "service_hint": None,
+        "banner": None,
+        "http": None,
+        "tls": None,
+
+    }
+
+    for attempt in range(retry_count):
+        s = None
+        try:
+            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            s.settimeout(timeout)
+
+            start_time = time.time()
+            err_code = s.connect_ex((host, port))
+            duration = time.time() - start_time
+            result["duration"] = round(duration, 3)
+            
+            if err_code == 0:
+                result["status"] = "open"
+                
+                if port in (80, 8080):
+                    result["service_hint"] = "http"
+                elif port in (443, 8443):
+                    result["service_hint"] = "https/tls
+                else:
+                    result["service_hint"] = "tcp_open" 
+                
+                logging.debug(f"Port {port} on {host} is open.")
+
+                break
+
+            elif err_code in [111, 104, 61]:
+                result["status"] = "closed"
+                logging.debug(f"Port {port} on {host} is closed.")
+                break
+            else:
+                if attempt < retry_count - 1:
+                    wait_time = 2 ** attempt
+                    time.sleep(wait_time)
+                    logging.debug(f"Target {host}:{port} timed out/filtered.Retrying in {wait_time}s... ")
+                else:
+                    result["status"] = "filtered/timeout"
+
+        except socket.timeout:
+            if attempt < retry_count - 1:
+                wait_time = 2 ** attempt
+                time.sleep(wait_time)
+                logging.debug(f"Target {host}:{port} timed out.Retrying in {wait_time}s... ")
+            else:           
+                result["status"] = "filtered/timeout"
+
+        except Exception as e:
+            result["status"] = "error"
+            logging.error(f"Unexpected erorror scanning {host}:{port}: {e}", exc_info=False)
+            break
+
+        finally:
+            if s:
+                s.close()
+            
+    return result
+
+def write_json_output(data, prefix):
+    pass
+
+def write_csv_output(data, prefix):
+    pass
 
 
 def main():
