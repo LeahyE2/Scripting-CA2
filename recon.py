@@ -1,4 +1,4 @@
-import argparse, logging, sys,time 
+import argparse, logging, sys,time, socket,json, concurrent.futures 
 
 logging.basicConfig(
     level=logging.INFO,
@@ -19,13 +19,11 @@ def parse_args():
     )
 
     subparsers = parser.add_subparsers(
-        dest = command",
+        dest = "command",
         help='Available commands'
     )
 
-    scan_parser.set_defailts(func=run_scan)
-
-    scan_parser = subparsers.add_paarser(
+    scan_parser = subparsers.add_parser(
         "scan",
         help="Run the comprehensive recon scan"
     )
@@ -48,7 +46,10 @@ def parse_args():
         type=int,
         default=20,
         help="Concurrent TCP workers (default 20)",
+
     )
+
+    scan_parser.set_defaults(func=run_scan)
 
     scan_parser.add_argument(
         "--http",
@@ -56,7 +57,7 @@ def parse_args():
         help="Probe HTTP(S) services and extract title, meta description, Server header",
     )
 
-    scan_scan_parser.add_argument(
+    scan_parser.add_argument(
         "--tls",
         action="store_true",
         help="Attempt TLS retrieval for ports that speak TLS",
@@ -64,7 +65,7 @@ def parse_args():
 
     scan_parser.add_argument(
         "--output",
-        deault="recon_results",
+        default="recon_results",
         help="Path prefix for results; tool writes PREFIX.results.json and PREFIX.results.csv",
     )
 
@@ -96,19 +97,30 @@ def parse_args():
 def parse_ports(port_arg):
 
     ports=set()
-    parts = port_arg.split("-")
+    parts = port_arg.split(",")
+
     for part in parts:
+        part = part.strip()
+
         if "-" in part:
-            start, end = map(int, part.split("-",))
-            ports.update(range(start),end + 1)
+            try:
+                start, end = map(int, part.split("-"))
+                ports.update(range(start, end + 1))
+            except ValueError:
+                logging.error(f"Invalid port range format: {part}") 
         else:
-            ports.add(int(part))
+        
+            try:
+                ports.add(int(part))
+            except ValueError:
+                logging.error(f"Invalid port value: {part}")
+
     return sorted(list(ports))
 
 """
 Reads the target file ad returns a list of targets.
 """
-def targets(file_path):
+def read_targets(file_path):
     try:
         with open(file_path, 'r') as f:
             targets = [line.strip() for line in f if line.strip()]
@@ -124,7 +136,7 @@ def run_scan(args):
     if args.verbose:
         logging.getLogger().setLevel(logging.DEBUG)
         logging.debug("Verbose logging enabled")
-    print(f"[*] startiing Recon tool at {time.strftime('%X' )}")
+    print(f"[*] starting Recon tool at {time.strftime('%X' )}")
 
     target_list = read_targets(args.targets)
     port_list = parse_ports(args.ports)
@@ -142,24 +154,7 @@ def main():
         sys.exit (1)
 
     args.func(args)
-
-    print(f"[*] startiing Recon tool")
-
-    target_list = read_targets(args.targets)
-    port_list = parse_ports(args.ports)
-
-    # Modified logging statement to include more details
-    logging.info(f"Loaded {len(target_list)} targets and {len(port_list)} ports to scan.")
-    logging.debug(f"Targets: {target_list}")
-    logging.debug(f"Ports: {port_list}")
-    logging.debug(f"Workers: {args.workers}")
-    logging.debug(f"HTTP probing: {args.http}")
-    logging.debug(f"TLS probing: {args.tls}")   
-    logging.debug(f"Output prefix: {args.output}")
-    logging.debug(f"Timeout: {args.timeout}")   
-
-    print("[*] Scan complete.")
+    
 
 if __name__ == "__main__":
     main()
-
