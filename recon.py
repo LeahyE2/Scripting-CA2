@@ -89,6 +89,17 @@ def targets(file_path):
     except FileNotFoundError:
         logging.error(f"Target file not found: {file_path}")
         sys.exit(1)
+    
+def run_scan(args):
+    """
+    logic for recon scan tool
+    """
+    if args.verbose:
+        logging.getLogger().setLevel(logging.DEBUG)
+        logging.debug("Verbose logging enabled")
+    
+
+
         
 def main():
     args = parse_args()
